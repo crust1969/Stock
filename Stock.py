@@ -60,4 +60,4 @@ if st.button("🔍 Analyse starten"):
             ax2.axhline(0, linestyle="--", color="black", linewidth=1)
             ax2.set_title("MACD & Signal")
             ax2.legend()
-            st.pyplot(fig
+            st.pyplot(fig)
