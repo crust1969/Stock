@@ -22,9 +22,14 @@ def calculate_macd(data):
     signal = macd.ewm(span=9, adjust=False).mean()
     return macd, signal
 
+def calculate_implied_move(price, iv, days):
+    iv_decimal = iv / 100
+    move = price * iv_decimal * (days / 365) ** 0.5
+    return round(move, 2)
+
 # 📈 Streamlit UI
 
-st.title("📊 Aktienanalyse – Kurs, SMA, MACD & PEG-Ratio")
+st.title("📊 Aktienanalyse – Kurs, SMA, MACD, PEG & Implied Move")
 
 symbol = st.text_input("Ticker eingeben (z. B. AAPL, MSFT, AMZN):", "AAPL")
 
@@ -57,28 +62,3 @@ if st.button("🔍 Analyse starten"):
             fig2, ax2 = plt.subplots()
             ax2.plot(macd, label="MACD", color="purple")
             ax2.plot(signal, label="Signal", color="gray")
-            ax2.axhline(0, linestyle="--", color="black", linewidth=1)
-            ax2.set_title("MACD & Signal")
-            ax2.legend()
-            st.pyplot(fig2)
-
-            # 📊 Fundamentaldaten
-            st.subheader("📊 Fundamentale Kennzahlen")
-
-            info = ticker.info
-            current_price = info.get("currentPrice", "Nicht verfügbar")
-            revenue_growth = info.get("revenueGrowth", None)
-            growth_str = f"{round(revenue_growth * 100, 2)} %" if revenue_growth else "Nicht verfügbar"
-
-            # PEG Ratio über Alpha Vantage
-            alpha_key = st.secrets["ALPHA_VANTAGE_API_KEY"]
-            peg_ratio = get_peg_from_alpha_vantage(symbol, alpha_key)
-
-            st.markdown(f"""
-            - **Aktueller Kurs:** {current_price} USD  
-            - **PEG-Ratio:** {peg_ratio}  
-            - **Umsatzwachstum (letzte 3 Jahre):** {growth_str}
-            """)
-
-    except Exception as e:
-        st.error(f"Fehler bei der Analyse: {e}")
