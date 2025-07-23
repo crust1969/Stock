@@ -62,3 +62,42 @@ if st.button("🔍 Analyse starten"):
             fig2, ax2 = plt.subplots()
             ax2.plot(macd, label="MACD", color="purple")
             ax2.plot(signal, label="Signal", color="gray")
+            ax2.axhline(0, linestyle="--", color="black", linewidth=1)
+            ax2.set_title("MACD & Signal")
+            ax2.legend()
+            st.pyplot(fig2)
+
+            # 📊 Fundamentaldaten
+            st.subheader("📊 Fundamentale Kennzahlen")
+
+            info = ticker.info
+            current_price = info.get("currentPrice", None)
+            revenue_growth = info.get("revenueGrowth", None)
+            iv_estimate = info.get("impliedVolatility", None)  # annualisiert
+
+            growth_str = f"{round(revenue_growth * 100, 2)} %" if revenue_growth else "Nicht verfügbar"
+
+            # PEG Ratio über Alpha Vantage
+            alpha_key = st.secrets["ALPHA_VANTAGE_API_KEY"]
+            peg_ratio = get_peg_from_alpha_vantage(symbol, alpha_key)
+
+            # Implied Move berechnen
+            if current_price and iv_estimate:
+                weekly_move = calculate_implied_move(current_price, iv_estimate * 100, 7)
+                monthly_move = calculate_implied_move(current_price, iv_estimate * 100, 30)
+                move_text = f"""
+                - **Implied Weekly Move (±):** {weekly_move} USD (~{round(weekly_move / current_price * 100, 2)} %)
+                - **Implied Monthly Move (±):** {monthly_move} USD (~{round(monthly_move / current_price * 100, 2)} %)
+                """
+            else:
+                move_text = "- **Implied Move:** Nicht verfügbar (IV fehlt)"
+
+            st.markdown(f"""
+            - **Aktueller Kurs:** {current_price} USD  
+            - **PEG-Ratio:** {peg_ratio}  
+            - **Umsatzwachstum (letzte 3 Jahre):** {growth_str}  
+            {move_text}
+            """)
+
+    except Exception as e:
+        st.error(f"Fehler bei der Analyse: {e}")
