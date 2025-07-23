@@ -33,7 +33,7 @@ def get_option_greeks(ticker_symbol):
     ticker = yf.Ticker(ticker_symbol)
     expiration_dates = ticker.options
     if not expiration_dates:
-        return []
+        return pd.DataFrame()
 
     try:
         opt_chain = ticker.option_chain(expiration_dates[0])
@@ -42,9 +42,9 @@ def get_option_greeks(ticker_symbol):
             greeks = calls[['strike', 'lastPrice', 'impliedVolatility', 'delta', 'gamma', 'theta', 'vega']]
             return greeks.head(10)
         else:
-            return []
+            return pd.DataFrame()
     except:
-        return []
+        return pd.DataFrame()
 
 # 📈 Streamlit UI
 
