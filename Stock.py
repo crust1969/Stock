@@ -22,6 +22,18 @@ def calculate_macd(data):
     signal = macd.ewm(span=9, adjust=False).mean()
     return macd, signal
 
+def calculate_rsi(data, period=14):
+    delta = data['Close'].diff()
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
+
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
 def calculate_implied_moves(price, iv):
     if price is None or iv is None:
         return None, None
@@ -31,7 +43,7 @@ def calculate_implied_moves(price, iv):
 
 # 📈 Streamlit UI
 
-st.title("📊 Aktienanalyse – Kurs, SMA, MACD & PEG-Ratio")
+st.title("📊 Aktienanalyse – Kurs, SMA, MACD, RSI & PEG-Ratio")
 
 symbol = st.text_input("Ticker eingeben (z. B. AAPL, MSFT, AMZN):", "AAPL")
 
@@ -44,12 +56,13 @@ if st.button("🔍 Analyse starten"):
         if isinstance(df, pd.DataFrame) and df.empty:
             st.error("⚠️ Keine Kursdaten gefunden.")
         else:
-            # 🧮 SMA & MACD
+            # 🧮 SMA, MACD, RSI
             df["SMA20"] = df["Close"].rolling(window=20).mean()
             df["SMA50"] = df["Close"].rolling(window=50).mean()
             macd, signal = calculate_macd(df)
+            rsi = calculate_rsi(df)
 
-            # 📈 Chart anzeigen
+            # 📉 Kurschart mit SMAs
             st.subheader("📉 Kursverlauf mit SMA20 & SMA50")
             fig, ax = plt.subplots()
             ax.plot(df.index, df["Close"], label="Kurs", linewidth=2)
@@ -59,7 +72,7 @@ if st.button("🔍 Analyse starten"):
             ax.legend()
             st.pyplot(fig)
 
-            # 📉 MACD anzeigen
+            # 📈 MACD-Chart
             st.subheader("📈 MACD")
             fig2, ax2 = plt.subplots()
             ax2.plot(df.index, macd, label="MACD", color="purple")
@@ -69,6 +82,16 @@ if st.button("🔍 Analyse starten"):
             ax2.legend()
             st.pyplot(fig2)
 
+            # 📊 RSI-Chart
+            st.subheader("📉 RSI (Relative Strength Index)")
+            fig3, ax3 = plt.subplots()
+            ax3.plot(df.index, rsi, label="RSI", color="blue")
+            ax3.axhline(70, color="red", linestyle="--", label="Überkauft (70)")
+            ax3.axhline(30, color="green", linestyle="--", label="Überverkauft (30)")
+            ax3.set_title("RSI (14 Tage)")
+            ax3.legend()
+            st.pyplot(fig3)
+
             # 📊 Fundamentaldaten
             st.subheader("📊 Fundamentale Kennzahlen")
 
@@ -77,14 +100,12 @@ if st.button("🔍 Analyse starten"):
             revenue_growth = info.get("revenueGrowth", None)
             growth_str = f"{round(revenue_growth * 100, 2)} %" if revenue_growth else "Nicht verfügbar"
 
-            # PEG Ratio über Alpha Vantage
             alpha_key = st.secrets["ALPHA_VANTAGE_API_KEY"]
             peg_ratio = get_peg_from_alpha_vantage(symbol, alpha_key)
 
-            # Implied Move berechnen
             iv = info.get("impliedVolatility", None)
             weekly_move, monthly_move = calculate_implied_moves(current_price, iv)
-            
+
             weekly_str = f"{round(weekly_move, 2)} USD" if weekly_move else "Nicht verfügbar"
             monthly_str = f"{round(monthly_move, 2)} USD" if monthly_move else "Nicht verfügbar"
 
@@ -98,5 +119,3 @@ if st.button("🔍 Analyse starten"):
 
     except Exception as e:
         st.error(f"Fehler bei der Analyse: {e}")
-
-
